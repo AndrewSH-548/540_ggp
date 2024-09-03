@@ -7,6 +7,12 @@
 
 #include <DirectXMath.h>
 
+// This code assumes files are in "ImGui" subfolder!
+// Adjust as necessary for your own folder structure and project setup
+#include "ImGui/imgui.h"
+#include "ImGui/imgui_impl_dx11.h"
+#include "ImGui/imgui_impl_win32.h"
+
 // Needed for a helper function to load pre-compiled shader files
 #pragma comment(lib, "d3dcompiler.lib")
 #include <d3dcompiler.h>
@@ -48,8 +54,16 @@ void Game::Initialize()
 		Graphics::Context->PSSetShader(pixelShader.Get(), 0, 0);
 	}
 
-	color = XMFLOAT4(0.4f, 0.6f, 0.75f, 0.0f);
-}
+	// Initialize ImGui itself & platform/renderer backends
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGui_ImplWin32_Init(Window::Handle());
+	ImGui_ImplDX11_Init(Graphics::Device.Get(), Graphics::Context.Get());
+	// Pick a style (uncomment one of these 3)
+	//ImGui::StyleColorsDark();
+	//ImGui::StyleColorsLight();
+	ImGui::StyleColorsClassic();
+};
 
 
 // --------------------------------------------------------
@@ -60,9 +74,11 @@ void Game::Initialize()
 // --------------------------------------------------------
 Game::~Game()
 {
-
+	// ImGui clean up
+	ImGui_ImplDX11_Shutdown();
+	ImGui_ImplWin32_Shutdown();
+	ImGui::DestroyContext();
 }
-
 
 // --------------------------------------------------------
 // Loads shaders from compiled shader object (.cso) files
@@ -142,9 +158,9 @@ void Game::CreateGeometry()
 {
 	// Create some temporary variables to represent colors
 	// - Not necessary, just makes things more readable
-	XMFLOAT4 red = XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);
-	XMFLOAT4 green = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
-	XMFLOAT4 blue = XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
+	XMFLOAT4 yellow = XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f);
+	XMFLOAT4 cyan = XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f);
+	XMFLOAT4 magenta = XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f);
 
 	// Set up the vertices of the triangle we would like to draw
 	// - We're going to copy this array, exactly as it exists in CPU memory
@@ -160,9 +176,9 @@ void Game::CreateGeometry()
 	//    since we're describing the triangle in terms of the window itself
 	Vertex vertices[] =
 	{
-		{ XMFLOAT3(+0.0f, +0.5f, +0.0f), red },
-		{ XMFLOAT3(+0.5f, -0.5f, +0.0f), blue },
-		{ XMFLOAT3(-0.5f, -0.5f, +0.0f), green },
+		{ XMFLOAT3(+0.0f, +0.5f, +0.0f), yellow },
+		{ XMFLOAT3(+0.5f, -0.5f, +0.0f), cyan },
+		{ XMFLOAT3(-0.5f, -0.5f, +0.0f), magenta },
 	};
 
 	// Set up indices, which tell us which vertices to use and in which order
@@ -234,6 +250,7 @@ void Game::CreateGeometry()
 // --------------------------------------------------------
 void Game::OnResize()
 {
+
 }
 
 
@@ -242,6 +259,10 @@ void Game::OnResize()
 // --------------------------------------------------------
 void Game::Update(float deltaTime, float totalTime)
 {
+	//Update the UI
+	UpdateImGui(deltaTime);
+	BuildUI();
+
 	// Example input checking: Quit if the escape key is pressed
 	if (Input::KeyDown(VK_ESCAPE))
 		Window::Quit();
@@ -253,13 +274,13 @@ void Game::Update(float deltaTime, float totalTime)
 // --------------------------------------------------------
 void Game::Draw(float deltaTime, float totalTime)
 {
+
 	// Frame START
 	// - These things should happen ONCE PER FRAME
 	// - At the beginning of Game::Draw() before drawing *anything*
 	{
 		// Clear the back buffer (erase what's on screen) and depth buffer
-		
-		Graphics::Context->ClearRenderTargetView(Graphics::BackBufferRTV.Get(),	color);
+		Graphics::Context->ClearRenderTargetView(Graphics::BackBufferRTV.Get(), color);
 		Graphics::Context->ClearDepthStencilView(Graphics::DepthBufferDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	}
 
@@ -287,6 +308,9 @@ void Game::Draw(float deltaTime, float totalTime)
 			3,     // The number of indices to use (we could draw a subset if we wanted)
 			0,     // Offset to the first index we want to use
 			0);    // Offset to add to each index when looking up vertices
+
+		ImGui::Render(); // Turns this frame’s UI into renderable triangles
+		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // Draws it to the screen
 	}
 
 	// Frame END
@@ -307,5 +331,47 @@ void Game::Draw(float deltaTime, float totalTime)
 	}
 }
 
+//Handles all of ImGui, called during Game::Update
+//Set aside since Update will be crowded later
+void Game::UpdateImGui(float deltaTime) {
+	// Feed fresh data to ImGui
+	ImGuiIO& io = ImGui::GetIO();
+	io.DeltaTime = deltaTime;
+	io.DisplaySize.x = (float)Window::Width();
+	io.DisplaySize.y = (float)Window::Height();
+	// Reset the frame
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+	// Determine new input capture
+	Input::SetKeyboardCapture(io.WantCaptureKeyboard);
+	Input::SetMouseCapture(io.WantCaptureMouse);
+	// Show the demo window, only if it's toggled
+	if (isDemoVisible) ImGui::ShowDemoWindow();
+}
 
+//Handle all UI-related updating logic here
+void Game::BuildUI() {
+	//Framerate: Uses a float placeholder to display the value accurately
+	ImGui::Text("Framerate: %f FPS", ImGui::GetIO().Framerate);
 
+	//Window Resolution: Display as 2 decimal integers.
+	ImGui::Text("Window Resolution: %dx%d", Window::Width(), Window::Height());
+
+	//Separate Window for the color editor
+	ImGui::Begin("Background Color Editor");
+
+	ImGui::ColorPicker4("Background", &color[0]);
+
+	ImGui::End();
+
+	if (ImGui::Button("Toggle Demo Window")) {
+		isDemoVisible = !isDemoVisible;
+	}
+
+	ImGui::Text("Counter: %d", number);
+
+	if (ImGui::Button("Increment Counter")) {
+		number++;
+	}
+}
