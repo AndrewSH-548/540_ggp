@@ -56,12 +56,12 @@ void Game::Initialize()
 	ImGui::StyleColorsClassic();
 	
 	cameras.push_back(make_shared<Camera>(Camera(
-		Window::AspectRatio(), 
-		XMFLOAT3(0, 0, -4), XMFLOAT3(0, 0, 0),										//Starting position and rotation vectors
+		Window::AspectRatio(),
+		XMFLOAT3(0, -5, -30), XMFLOAT3(-0.02f, 0, 0),										//Starting position and rotation vectors
 		0.4f, false)));
 	cameras.push_back(make_shared<Camera>(Camera(
 		Window::AspectRatio(),
-		XMFLOAT3(-2.4f, 0, -2), XMFLOAT3(0, XM_PIDIV4, 0),
+		XMFLOAT3(-20.4f, 0, -20), XMFLOAT3(0.145f, XM_PIDIV4, 0),
 		0.4f, false)));
 	cameras.push_back(make_shared<Camera>(Camera(
 		Window::AspectRatio(),
@@ -98,6 +98,9 @@ void Game::LoadShaders()
 {
 	vertexShader = make_shared<SimpleVertexShader>(Graphics::Device, Graphics::Context, FixPath(L"VertexShader.cso").c_str());
 	pixelShader = make_shared<SimplePixelShader>(Graphics::Device, Graphics::Context, FixPath(L"PixelShader.cso").c_str());
+	uvPixelShader = make_shared<SimplePixelShader>(Graphics::Device, Graphics::Context, FixPath(L"psUV.cso").c_str());
+	normalPixelShader = make_shared<SimplePixelShader>(Graphics::Device, Graphics::Context, FixPath(L"psNormal.cso").c_str());
+	customPixelShader = make_shared<SimplePixelShader>(Graphics::Device, Graphics::Context, FixPath(L"psCustom.cso").c_str());
 }
 
 // --------------------------------------------------------
@@ -107,13 +110,31 @@ void Game::CreateGeometry()
 {
 	//Create the materials to pass into the entities
 	Material redFilter = Material(XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f), vertexShader, pixelShader);
-	Material greenFilter = Material(XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f), vertexShader, pixelShader);
-	Material blueFilter = Material(XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f), vertexShader, pixelShader);
+	Material uvMaterial = Material(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), vertexShader, uvPixelShader);
+	Material normalMaterial = Material(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), vertexShader, normalPixelShader);
+	Material fancyMaterial = Material(XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f), vertexShader, customPixelShader);
 
-	entities.push_back(Entity("Sphere", Mesh(FixPath(L"../../Assets/Models/sphere.obj").c_str()), redFilter));
-	entities.push_back(Entity("Helix", Mesh(FixPath(L"../../Assets/Models/helix.obj").c_str()), blueFilter));
+	entities.push_back(Entity("Fancy Donut", Mesh(FixPath(L"../../Assets/Models/torus.obj").c_str()), fancyMaterial));
+	entities.push_back(Entity("Fancy Cube", Mesh(FixPath(L"../../Assets/Models/cube.obj").c_str()), fancyMaterial));
+	entities.push_back(Entity("Red-Green Sphere", Mesh(FixPath(L"../../Assets/Models/sphere.obj").c_str()), uvMaterial));
+	entities.push_back(Entity("Red-Green Helix", Mesh(FixPath(L"../../Assets/Models/helix.obj").c_str()), uvMaterial));
+	entities.push_back(Entity("Red Cube", Mesh(FixPath(L"../../Assets/Models/cube.obj").c_str()), redFilter));
+	entities.push_back(Entity("Red Plane", Mesh(FixPath(L"../../Assets/Models/quad_double_sided.obj").c_str()), redFilter));
+	entities.push_back(Entity("RGB Donut", Mesh(FixPath(L"../../Assets/Models/torus.obj").c_str()), normalMaterial));
+	entities.push_back(Entity("RGB Helix", Mesh(FixPath(L"../../Assets/Models/helix.obj").c_str()), normalMaterial));
 
-	entities[1].GetTransform()->MoveAbsolute(2.0f, 0.0f, 0.0f);
+	//Position all the objects.
+	for (int i = 0; i < entities.size(); i++) {
+		if (i % 2 == 1) entities[i].GetTransform()->MoveAbsolute(3.0f, 0.0f, 0.0f);
+		if (i / 2 >= 1) {
+			for (int j = 0; j < i / 2; j++) {
+				entities[i].GetTransform()->MoveAbsolute(0.0f, -3.0f, 0.0f);
+			}
+		}
+	}
+
+	//Make the plane upright
+	entities[5].GetTransform()->Rotate(XM_PIDIV2, 0.0f, 0.0f);
 }
 
 
@@ -141,7 +162,9 @@ void Game::Update(float deltaTime, float totalTime)
 	UpdateImGui(deltaTime);
 	BuildUI();
 	cameras[activeCamera]->Update(deltaTime);
-	entities[0].GetTransform()->Rotate(0, 0, deltaTime);
+	entities[0].GetTransform()->Rotate(0, deltaTime, 0);
+	entities[3].GetTransform()->Rotate(0, deltaTime, 0);
+	entities[7].GetTransform()->Rotate(0, deltaTime, 0);
 
 	for (int i = 0; i < entities.size(); i++) {
 		entities[i].GetTransform()->SetWorldMatrices();

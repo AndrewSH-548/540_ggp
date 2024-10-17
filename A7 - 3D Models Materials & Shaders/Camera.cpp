@@ -20,7 +20,7 @@ Camera::Camera(float aspectRatio, XMFLOAT3 startPos, XMFLOAT3 orientation, float
 	
 	fovRadians = fovRads;
 
-	moveSpeed = 1;
+	moveSpeed = 10;
 	mouseSpeed = 0.005f;
 
 	this->isOrthographic = isOrthographic;

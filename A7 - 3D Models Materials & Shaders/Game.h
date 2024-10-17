@@ -53,6 +53,9 @@ private:
 
 	// Shaders and shader-related constructs
 	std::shared_ptr<SimplePixelShader> pixelShader;
+	std::shared_ptr<SimplePixelShader> uvPixelShader;
+	std::shared_ptr<SimplePixelShader> normalPixelShader;
+	std::shared_ptr<SimplePixelShader> customPixelShader;
 	std::shared_ptr<SimpleVertexShader> vertexShader;
 
 	vector<std::shared_ptr<Camera>> cameras;
