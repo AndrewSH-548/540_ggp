@@ -308,7 +308,7 @@ void Game::BuildUI() {
 		cameras[activeCamera]->GetTransform().GetRotation().z);
 	ImGui::Text("FOV (Radians): %f", cameras[activeCamera]->GetFov());
 	if (ImGui::Button("Previous")) {
-		if (activeCamera == 0) activeCamera = cameras.size() - 1;
+		if (activeCamera == 0) activeCamera = (int)cameras.size() - 1;
 		else activeCamera--;
 	}
 	ImGui::SameLine();
