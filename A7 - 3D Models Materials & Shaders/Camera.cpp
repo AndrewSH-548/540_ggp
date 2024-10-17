@@ -98,8 +98,8 @@ void Camera::Update(float deltaTime) {
 	if (Input::KeyDown('F')) transform.MoveAbsolute(XMFLOAT3(0, -moveSpeed * deltaTime * 2, 0));
 
 	if (Input::MouseLeftDown()) {
-		float cursorMovementX = Input::GetMouseXDelta();
-		float cursorMovementY = Input::GetMouseYDelta();
+		float cursorMovementX = (float)Input::GetMouseXDelta();
+		float cursorMovementY = (float)Input::GetMouseYDelta();
 
 		transform.Rotate(cursorMovementY * mouseSpeed, cursorMovementX * mouseSpeed, 0);
 	}
