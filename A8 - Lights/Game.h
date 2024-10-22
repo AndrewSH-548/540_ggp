@@ -40,7 +40,7 @@ private:
 	void CreateGeometry();
 	void UpdateImGui(float deltaTime);
 	void BuildUI();
-	void ConstructShaderData(Entity currentEntity, float totalTime);
+	void ConstructShaderData(Entity currentEntity, DirectX::XMFLOAT3 ambientColor, float totalTime);
 
 	// Note the usage of ComPtr below
 	//  - This is a smart pointer for objects that abide by the

@@ -109,7 +109,7 @@ void Game::LoadShaders()
 void Game::CreateGeometry()
 {
 	//Create the materials to pass into the entities
-	Material redFilter = Material(XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f), vertexShader, pixelShader, 0);
+	Material lightFilter = Material(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), vertexShader, pixelShader, 0);
 	Material uvMaterial = Material(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), vertexShader, uvPixelShader, 0.5);
 	Material normalMaterial = Material(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), vertexShader, normalPixelShader, 1);
 	Material fancyMaterial = Material(XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f), vertexShader, customPixelShader, 0.2);
@@ -118,8 +118,8 @@ void Game::CreateGeometry()
 	entities.push_back(Entity("Fancy Cube", Mesh(FixPath(L"../../Assets/Models/cube.obj").c_str()), fancyMaterial));
 	entities.push_back(Entity("Red-Green Sphere", Mesh(FixPath(L"../../Assets/Models/sphere.obj").c_str()), uvMaterial));
 	entities.push_back(Entity("Red-Green Helix", Mesh(FixPath(L"../../Assets/Models/helix.obj").c_str()), uvMaterial));
-	entities.push_back(Entity("Red Cube", Mesh(FixPath(L"../../Assets/Models/cube.obj").c_str()), redFilter));
-	entities.push_back(Entity("Red Plane", Mesh(FixPath(L"../../Assets/Models/quad_double_sided.obj").c_str()), redFilter));
+	entities.push_back(Entity("Red Cube", Mesh(FixPath(L"../../Assets/Models/cube.obj").c_str()), lightFilter));
+	entities.push_back(Entity("Red Plane", Mesh(FixPath(L"../../Assets/Models/quad_double_sided.obj").c_str()), lightFilter));
 	entities.push_back(Entity("RGB Donut", Mesh(FixPath(L"../../Assets/Models/torus.obj").c_str()), normalMaterial));
 	entities.push_back(Entity("RGB Helix", Mesh(FixPath(L"../../Assets/Models/helix.obj").c_str()), normalMaterial));
 
@@ -198,7 +198,7 @@ void Game::Draw(float deltaTime, float totalTime)
 		for (int i = 0; i < entities.size(); i++) {
 			entities[i].GetMaterial()->GetVertexShader()->SetShader();
 			entities[i].GetMaterial()->GetPixelShader()->SetShader();
-			ConstructShaderData(entities[i], totalTime);
+			ConstructShaderData(entities[i], XMFLOAT3(displayColor[0]/3.0f, displayColor[1]/3.0f, displayColor[2]/3.0f), totalTime);
 			entities[i].Draw();
 		}
 		ImGui::Render(); // Turns this frame’s UI into renderable triangles
@@ -223,15 +223,17 @@ void Game::Draw(float deltaTime, float totalTime)
 	}
 }
 
-void Game::ConstructShaderData(Entity currentEntity, float totalTime) {
+void Game::ConstructShaderData(Entity currentEntity, XMFLOAT3 ambientColor, float totalTime) {
 	std::shared_ptr<SimpleVertexShader> vertexShader = currentEntity.GetMaterial()->GetVertexShader();
 	vertexShader->SetMatrix4x4("world", currentEntity.GetTransform()->GetWorldMatrix()); 
+	vertexShader->SetMatrix4x4("worldInverseTranspose", currentEntity.GetTransform()->GetWorldInverseTransposeMatrix());
 	vertexShader->SetMatrix4x4("view", cameras[activeCamera]->GetViewMatrix());
 	vertexShader->SetMatrix4x4("projection", cameras[activeCamera]->GetProjectionMatrix()); 
 	
 	std::shared_ptr<SimplePixelShader> pixelShader = currentEntity.GetMaterial()->GetPixelShader();
 	pixelShader->SetFloat4("colorTint", currentEntity.GetMaterial()->GetColorTint());
 	pixelShader->SetFloat3("cameraPos", cameras[activeCamera]->GetTransform().GetPosition());
+	pixelShader->SetFloat3("ambient", ambientColor);
 	pixelShader->SetFloat("totalTime", totalTime);
 	pixelShader->SetFloat("roughness", currentEntity.GetMaterial()->GetRoughness());
 

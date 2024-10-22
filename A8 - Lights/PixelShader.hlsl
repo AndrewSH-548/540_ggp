@@ -3,8 +3,8 @@
 cbuffer ExternalData : register(b0) {
 	float4 colorTint;
     float3 cameraPos;
+	float3 ambient;
     float roughness;
-    float3 ambient;
 }
 
 // --------------------------------------------------------
@@ -18,10 +18,11 @@ cbuffer ExternalData : register(b0) {
 // --------------------------------------------------------
 float4 main(VertexToPixel input) : SV_TARGET
 {
+	input.normal = normalize(input.normal);
 	// Just return the input color
 	// - This color (like most values passing through the rasterizer) is 
 	//   interpolated for each pixel between the corresponding vertices 
 	//   of the triangle we're rendering
-	return colorTint;
-    //return float4(roughness.rrr, 1);
+	//return colorTint * float4(ambient, 1);
+    return float4(input.normal, 1);
 }
