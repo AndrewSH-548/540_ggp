@@ -6,6 +6,9 @@ cbuffer ExternalData : register(b0) {
 	float3 ambient;
     float roughness;
     Light yellowLightD;
+    Light cyanLightD;
+    Light magentaLightD;
+    Light redLightP;
 }
 
 // Calculates the diffuse term.
@@ -25,6 +28,23 @@ float phongSpecular(VertexToPixel input, Light light)
     return specular;
 }
 
+float3 constructLight(VertexToPixel input, Light light)
+{
+    float3 ambientTerm = normalize((float3) colorTint * ambient);
+    float3 diffuseTerm = calculateDiffuseTerm(input, light, (float3) colorTint);
+    float specular = phongSpecular(input, light);
+    
+    float3 finalLight = ambientTerm * (diffuseTerm + specular);
+    return finalLight;
+}
+
+float Attenuate(Light light, float3 worldPosition)
+{
+    float distance = distance(light.position, worldPosition);
+    float attenuation = saturate(1.0f - (distance * distance / (light.range * light.range)));
+    return attenuation * attenuation;
+}
+
 // --------------------------------------------------------
 // The entry point (main method) for our pixel shader
 // 
@@ -37,12 +57,11 @@ float phongSpecular(VertexToPixel input, Light light)
 float4 main(VertexToPixel input) : SV_TARGET
 {
     input.normal = normalize(input.normal);
+    redLightP.direction = input.worldPosition;
 	
-    float3 ambientTerm = normalize((float3)colorTint * ambient);
-    float3 diffuseTerm = calculateDiffuseTerm(input, yellowLightD, (float3)colorTint);	
-    float specular = phongSpecular(input, yellowLightD);
-    
-    float3 finalLight = ambientTerm * diffuseTerm + specular;
+    float3 finalLight = constructLight(input, yellowLightD)
+    + constructLight(input, cyanLightD)
+    + constructLight(input, magentaLightD);
 	
 	// Just return the input color
 	// - This color (like most values passing through the rasterizer) is 

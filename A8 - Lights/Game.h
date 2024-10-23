@@ -62,5 +62,9 @@ private:
 	vector<std::shared_ptr<Camera>> cameras;
 	int activeCamera;
 	Light yellowLightD;
+	Light cyanLightD;
+	Light magentaLightD;
+	Light redLightP;
+	Light blueLightP;
 };
 

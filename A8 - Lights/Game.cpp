@@ -109,7 +109,7 @@ void Game::LoadShaders()
 void Game::CreateGeometry()
 {
 	//Create the materials to pass into the entities
-	Material lightFilter = Material(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), vertexShader, pixelShader, 0.9f);
+	Material lightFilter = Material(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), vertexShader, pixelShader, 0.99f);
 
 	entities.push_back(Entity("Fancy Donut", Mesh(FixPath(L"../../Assets/Models/torus.obj").c_str()), lightFilter));
 	entities.push_back(Entity("Fancy Cube", Mesh(FixPath(L"../../Assets/Models/cube.obj").c_str()), lightFilter));
@@ -133,12 +133,30 @@ void Game::CreateGeometry()
 	//Make the plane upright
 	entities[5].GetTransform()->Rotate(XM_PIDIV2, 0.0f, 0.0f);
 
-	yellowLightD = {};
+	//Add 3 directional lights
+	//First Light: Yellow, lower left source
 	yellowLightD.type = LIGHT_TYPE_DIRECTIONAL;
-	yellowLightD.direction = XMFLOAT3(1.0f, 1.0f, 0.0f);
+	yellowLightD.direction = XMFLOAT3(1.0f, -1.0f, 0.0f);
 	yellowLightD.color = XMFLOAT3(1.0f, 1.0f, 0.0f);
-	yellowLightD.intensity = 1.0f;
+	yellowLightD.intensity = 1.3f;
+	
+	//Second Light: Cyan, lower right source farther front
+	cyanLightD.type = LIGHT_TYPE_DIRECTIONAL;
+	cyanLightD.direction = XMFLOAT3(-1.0f, -1.0f, 1.0f);
+	cyanLightD.color = XMFLOAT3(0.0f, 1.0f, 1.0f);
+	cyanLightD.intensity = 1.3f;
+	
+	//Third Light: Magenta, above and behind source
+	magentaLightD.type = LIGHT_TYPE_DIRECTIONAL;
+	magentaLightD.direction = XMFLOAT3(0.0f, 1.0f, -1.0f);
+	magentaLightD.color = XMFLOAT3(1.0f, 0.0f, 1.0f);
+	magentaLightD.intensity = 1.3f;
 
+	//Point Light: Red
+	redLightP.type = LIGHT_TYPE_POINT;
+	redLightP.position = XMFLOAT3(0.0f, -1.0f, 0.0f);
+	redLightP.color = XMFLOAT3(1.0f, 0.0f, 0.0f);
+	redLightP.intensity = 1.3f;
 }
 
 
@@ -202,7 +220,7 @@ void Game::Draw(float deltaTime, float totalTime)
 		for (int i = 0; i < entities.size(); i++) {
 			entities[i].GetMaterial()->GetVertexShader()->SetShader();
 			entities[i].GetMaterial()->GetPixelShader()->SetShader();
-			ConstructShaderData(entities[i], XMFLOAT3(displayColor[0]/3.0f, displayColor[1]/3.0f, displayColor[2]/3.0f), totalTime);
+			ConstructShaderData(entities[i], XMFLOAT3(1, 1, 1), totalTime);
 			entities[i].Draw();
 		}
 		ImGui::Render(); // Turns this frame’s UI into renderable triangles
@@ -241,6 +259,9 @@ void Game::ConstructShaderData(Entity currentEntity, XMFLOAT3 ambientColor, floa
 	pixelShader->SetFloat("totalTime", totalTime);
 	pixelShader->SetFloat("roughness", currentEntity.GetMaterial()->GetRoughness());
 	pixelShader->SetData("yellowLightD", &yellowLightD, sizeof(Light));
+	pixelShader->SetData("cyanLightD", &cyanLightD, sizeof(Light));
+	pixelShader->SetData("magentaLightD", &magentaLightD, sizeof(Light));
+	pixelShader->SetData("redLightP", &redLightP, sizeof(Light));
 
 	//Copy the data to the buffer at the start of the frame
 	vertexShader->CopyAllBufferData();
@@ -299,10 +320,6 @@ void Game::BuildUI() {
 		ImGui::PopID();
 	}
 
-	ImGui::End();
-
-	ImGui::Begin("Shader Editor");
-	ImGui::ColorPicker4("Color Tint", &colorTint[0]);
 	ImGui::End();
 
 	ImGui::Begin("Camera Control");
