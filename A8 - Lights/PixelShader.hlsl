@@ -40,8 +40,8 @@ float3 constructLight(VertexToPixel input, Light light)
 
 float Attenuate(Light light, float3 worldPosition)
 {
-    float distance = distance(light.position, worldPosition);
-    float attenuation = saturate(1.0f - (distance * distance / (light.range * light.range)));
+    float dist = distance(light.position, worldPosition);
+    float attenuation = saturate(1.0f - (dist * dist / (light.range * light.range)));
     return attenuation * attenuation;
 }
 
@@ -57,11 +57,13 @@ float Attenuate(Light light, float3 worldPosition)
 float4 main(VertexToPixel input) : SV_TARGET
 {
     input.normal = normalize(input.normal);
-    redLightP.direction = input.worldPosition;
+    //redLightP.direction = input.worldPosition - redLightP.position;
 	
     float3 finalLight = constructLight(input, yellowLightD)
-    + constructLight(input, cyanLightD)
-    + constructLight(input, magentaLightD);
+        + constructLight(input, cyanLightD)
+    //+ constructLight(input, redLightP)
+        + constructLight(input, magentaLightD)
+        ;
 	
 	// Just return the input color
 	// - This color (like most values passing through the rasterizer) is 
