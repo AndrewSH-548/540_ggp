@@ -5,6 +5,24 @@ cbuffer ExternalData : register(b0) {
     float3 cameraPos;
 	float3 ambient;
     float roughness;
+    Light yellowLightD;
+}
+
+// Calculates the diffuse term.
+float3 calculateDiffuseTerm(VertexToPixel input, Light light, float3 surfaceColor)
+{
+    return saturate(dot(input.normal, -light.direction)) * light.color * light.intensity * surfaceColor;
+}
+
+float phongSpecular(VertexToPixel input, Light light)
+{
+    float3 view = normalize(cameraPos - input.worldPosition);
+    float3 reflection = reflect(light.direction, input.normal);
+    float specularExponent = (1 - roughness) * MAX_SPECULAR_EXPONENT;
+	
+    float specular = pow(saturate(dot(reflection, view)), specularExponent);
+    
+    return specular;
 }
 
 // --------------------------------------------------------
@@ -18,11 +36,18 @@ cbuffer ExternalData : register(b0) {
 // --------------------------------------------------------
 float4 main(VertexToPixel input) : SV_TARGET
 {
-	input.normal = normalize(input.normal);
+    input.normal = normalize(input.normal);
+	
+    float3 ambientTerm = normalize((float3)colorTint * ambient);
+    float3 diffuseTerm = calculateDiffuseTerm(input, yellowLightD, (float3)colorTint);	
+    float specular = phongSpecular(input, yellowLightD);
+    
+    float3 finalLight = ambientTerm * diffuseTerm + specular;
+	
 	// Just return the input color
 	// - This color (like most values passing through the rasterizer) is 
 	//   interpolated for each pixel between the corresponding vertices 
 	//   of the triangle we're rendering
 	//return colorTint * float4(ambient, 1);
-    return float4(input.normal, 1);
+    return float4(finalLight, 1);
 }

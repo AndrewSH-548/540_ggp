@@ -3,6 +3,7 @@
 #include "Entity.h"
 #include "Camera.h"
 #include "SimpleShader.h"
+#include "Light.h"
 
 #include <d3d11.h>
 #include <wrl/client.h>
@@ -60,5 +61,6 @@ private:
 
 	vector<std::shared_ptr<Camera>> cameras;
 	int activeCamera;
+	Light yellowLightD;
 };
 

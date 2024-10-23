@@ -109,19 +109,16 @@ void Game::LoadShaders()
 void Game::CreateGeometry()
 {
 	//Create the materials to pass into the entities
-	Material lightFilter = Material(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), vertexShader, pixelShader, 0);
-	Material uvMaterial = Material(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), vertexShader, uvPixelShader, 0.5);
-	Material normalMaterial = Material(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), vertexShader, normalPixelShader, 1);
-	Material fancyMaterial = Material(XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f), vertexShader, customPixelShader, 0.2);
+	Material lightFilter = Material(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), vertexShader, pixelShader, 0.9f);
 
-	entities.push_back(Entity("Fancy Donut", Mesh(FixPath(L"../../Assets/Models/torus.obj").c_str()), fancyMaterial));
-	entities.push_back(Entity("Fancy Cube", Mesh(FixPath(L"../../Assets/Models/cube.obj").c_str()), fancyMaterial));
-	entities.push_back(Entity("Red-Green Sphere", Mesh(FixPath(L"../../Assets/Models/sphere.obj").c_str()), uvMaterial));
-	entities.push_back(Entity("Red-Green Helix", Mesh(FixPath(L"../../Assets/Models/helix.obj").c_str()), uvMaterial));
+	entities.push_back(Entity("Fancy Donut", Mesh(FixPath(L"../../Assets/Models/torus.obj").c_str()), lightFilter));
+	entities.push_back(Entity("Fancy Cube", Mesh(FixPath(L"../../Assets/Models/cube.obj").c_str()), lightFilter));
+	entities.push_back(Entity("Red-Green Sphere", Mesh(FixPath(L"../../Assets/Models/sphere.obj").c_str()), lightFilter));
+	entities.push_back(Entity("Red-Green Helix", Mesh(FixPath(L"../../Assets/Models/helix.obj").c_str()), lightFilter));
 	entities.push_back(Entity("Red Cube", Mesh(FixPath(L"../../Assets/Models/cube.obj").c_str()), lightFilter));
 	entities.push_back(Entity("Red Plane", Mesh(FixPath(L"../../Assets/Models/quad_double_sided.obj").c_str()), lightFilter));
-	entities.push_back(Entity("RGB Donut", Mesh(FixPath(L"../../Assets/Models/torus.obj").c_str()), normalMaterial));
-	entities.push_back(Entity("RGB Helix", Mesh(FixPath(L"../../Assets/Models/helix.obj").c_str()), normalMaterial));
+	entities.push_back(Entity("RGB Donut", Mesh(FixPath(L"../../Assets/Models/torus.obj").c_str()), lightFilter));
+	entities.push_back(Entity("RGB Helix", Mesh(FixPath(L"../../Assets/Models/helix.obj").c_str()), lightFilter));
 
 	//Position all the objects.
 	for (int i = 0; i < entities.size(); i++) {
@@ -135,6 +132,13 @@ void Game::CreateGeometry()
 
 	//Make the plane upright
 	entities[5].GetTransform()->Rotate(XM_PIDIV2, 0.0f, 0.0f);
+
+	yellowLightD = {};
+	yellowLightD.type = LIGHT_TYPE_DIRECTIONAL;
+	yellowLightD.direction = XMFLOAT3(1.0f, 1.0f, 0.0f);
+	yellowLightD.color = XMFLOAT3(1.0f, 1.0f, 0.0f);
+	yellowLightD.intensity = 1.0f;
+
 }
 
 
@@ -236,6 +240,7 @@ void Game::ConstructShaderData(Entity currentEntity, XMFLOAT3 ambientColor, floa
 	pixelShader->SetFloat3("ambient", ambientColor);
 	pixelShader->SetFloat("totalTime", totalTime);
 	pixelShader->SetFloat("roughness", currentEntity.GetMaterial()->GetRoughness());
+	pixelShader->SetData("yellowLightD", &yellowLightD, sizeof(Light));
 
 	//Copy the data to the buffer at the start of the frame
 	vertexShader->CopyAllBufferData();

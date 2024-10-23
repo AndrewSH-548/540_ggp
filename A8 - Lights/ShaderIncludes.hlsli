@@ -36,4 +36,19 @@ struct VertexToPixel
     float2 uv : TEXCOORD;
 };
 
+#define LIGHT_TYPE_DIRECTIONAL	0
+#define LIGHT_TYPE_POINT		1
+#define LIGHT_TYPE_SPOT			2
+#define MAX_SPECULAR_EXPONENT   256.0f
+
+struct Light
+{
+    int type; //0, 1 or 2, based on the defined constants.
+    float3 direction;
+    float range;
+    float3 position;
+    float intensity;
+    float3 color;
+};
+
 #endif
