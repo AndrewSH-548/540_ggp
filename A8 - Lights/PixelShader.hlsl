@@ -6,10 +6,6 @@ cbuffer ExternalData : register(b0) {
 	float3 ambient;
     float roughness;
     Light lights[5];
-    Light yellowLightD;
-    Light cyanLightD;
-    Light magentaLightD;
-    Light redLightP;
 }
 
 // Calculates the diffuse term.
