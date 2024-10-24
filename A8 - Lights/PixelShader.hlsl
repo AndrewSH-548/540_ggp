@@ -5,6 +5,7 @@ cbuffer ExternalData : register(b0) {
     float3 cameraPos;
 	float3 ambient;
     float roughness;
+    Light lights[5];
     Light yellowLightD;
     Light cyanLightD;
     Light magentaLightD;
@@ -20,7 +21,7 @@ float3 calculateDiffuseTerm(VertexToPixel input, Light light, float3 surfaceColo
 float phongSpecular(VertexToPixel input, Light light)
 {
     float3 view = normalize(cameraPos - input.worldPosition);
-    float3 reflection = reflect(light.direction, input.normal);
+    float3 reflection = reflect(normalize(light.direction), input.normal);
     float specularExponent = (1 - roughness) * MAX_SPECULAR_EXPONENT;
 	
     float specular = pow(saturate(dot(reflection, view)), specularExponent);
@@ -28,21 +29,22 @@ float phongSpecular(VertexToPixel input, Light light)
     return specular;
 }
 
-float3 constructLight(VertexToPixel input, Light light)
-{
-    float3 ambientTerm = normalize((float3) colorTint * ambient);
-    float3 diffuseTerm = calculateDiffuseTerm(input, light, (float3) colorTint);
-    float specular = phongSpecular(input, light);
-    
-    float3 finalLight = ambientTerm * (diffuseTerm + specular);
-    return finalLight;
-}
-
 float Attenuate(Light light, float3 worldPosition)
 {
     float dist = distance(light.position, worldPosition);
     float attenuation = saturate(1.0f - (dist * dist / (light.range * light.range)));
     return attenuation * attenuation;
+}
+
+float3 constructLight(VertexToPixel input, Light light)
+{
+    float3 ambientTerm = normalize((float3) colorTint * ambient);
+    float3 diffuseTerm = calculateDiffuseTerm(input, light, (float3) colorTint);
+    float specular = phongSpecular(input, light);
+    float3 finalLight = ambientTerm * diffuseTerm + specular;
+    if (light.type == LIGHT_TYPE_POINT)
+        finalLight *= Attenuate(light, input.worldPosition);
+    return finalLight;
 }
 
 // --------------------------------------------------------
@@ -57,13 +59,21 @@ float Attenuate(Light light, float3 worldPosition)
 float4 main(VertexToPixel input) : SV_TARGET
 {
     input.normal = normalize(input.normal);
-    //redLightP.direction = input.worldPosition - redLightP.position;
-	
-    float3 finalLight = constructLight(input, yellowLightD)
-        + constructLight(input, cyanLightD)
-    //+ constructLight(input, redLightP)
-        + constructLight(input, magentaLightD)
-        ;
+    float3 finalLight;
+    
+    for (int i = 0; i < 5; i++)
+    {
+        if (lights[i].type == LIGHT_TYPE_POINT)
+        {
+            Light editableLight = lights[i];
+            editableLight.direction = input.worldPosition - editableLight.position;
+            finalLight += constructLight(input, editableLight);
+        }
+        else
+        {
+            finalLight += constructLight(input, lights[i]);
+        }
+    }
 	
 	// Just return the input color
 	// - This color (like most values passing through the rasterizer) is 

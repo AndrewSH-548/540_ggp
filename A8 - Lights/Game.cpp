@@ -109,7 +109,7 @@ void Game::LoadShaders()
 void Game::CreateGeometry()
 {
 	//Create the materials to pass into the entities
-	Material lightFilter = Material(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), vertexShader, pixelShader, 0.99f);
+	Material lightFilter = Material(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), vertexShader, pixelShader, 0.1f);
 
 	entities.push_back(Entity("Fancy Donut", Mesh(FixPath(L"../../Assets/Models/torus.obj").c_str()), lightFilter));
 	entities.push_back(Entity("Fancy Cube", Mesh(FixPath(L"../../Assets/Models/cube.obj").c_str()), lightFilter));
@@ -134,29 +134,41 @@ void Game::CreateGeometry()
 	entities[5].GetTransform()->Rotate(XM_PIDIV2, 0.0f, 0.0f);
 
 	//Add 3 directional lights
+	for (int i = 0; i < 3; i++) {
+		Light light = {};
+		light.type = LIGHT_TYPE_DIRECTIONAL;
+		light.intensity = 1.3f;
+		lights.push_back(light);
+	}
 	//First Light: Yellow, lower left source
-	yellowLightD.type = LIGHT_TYPE_DIRECTIONAL;
-	yellowLightD.direction = XMFLOAT3(1.0f, -1.0f, 0.0f);
-	yellowLightD.color = XMFLOAT3(1.0f, 1.0f, 0.0f);
-	yellowLightD.intensity = 1.3f;
-	
+	lightNames.push_back("Yellow");
+	lights[0].direction = XMFLOAT3(1.0f, -1.0f, 0.0f);
+	lights[0].color = XMFLOAT3(0.8f, 0.8f, 0.3f);
 	//Second Light: Cyan, lower right source farther front
-	cyanLightD.type = LIGHT_TYPE_DIRECTIONAL;
-	cyanLightD.direction = XMFLOAT3(-1.0f, -1.0f, 1.0f);
-	cyanLightD.color = XMFLOAT3(0.0f, 1.0f, 1.0f);
-	cyanLightD.intensity = 1.3f;
-	
+	lightNames.push_back("Cyan");
+	lights[1].direction = XMFLOAT3(-1.0f, -1.0f, 1.0f);
+	lights[1].color = XMFLOAT3(0.3f, 0.8f, 0.8f);
 	//Third Light: Magenta, above and behind source
-	magentaLightD.type = LIGHT_TYPE_DIRECTIONAL;
-	magentaLightD.direction = XMFLOAT3(0.0f, 1.0f, -1.0f);
-	magentaLightD.color = XMFLOAT3(1.0f, 0.0f, 1.0f);
-	magentaLightD.intensity = 1.3f;
+	lightNames.push_back("Magenta");
+	lights[2].direction = XMFLOAT3(0.0f, 1.0f, -1.0f);
+	lights[2].color = XMFLOAT3(0.8f, 0.3f, 0.8f);
 
-	//Point Light: Red
-	redLightP.type = LIGHT_TYPE_POINT;
-	redLightP.position = XMFLOAT3(0.0f, -1.0f, 0.0f);
-	redLightP.color = XMFLOAT3(1.0f, 0.0f, 0.0f);
-	redLightP.intensity = 1.3f;
+	//Add 2 point lights
+	for (int i = 0; i < 2; i++) {
+		Light light = {};
+		light.type = LIGHT_TYPE_POINT;
+		light.range = 8.0f;
+		light.intensity = 4;
+		lights.push_back(light);
+	}
+	//Fourth Light: Red point light
+	lightNames.push_back("Red");
+	lights[3].position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	lights[3].color = XMFLOAT3(1.0f, 0.0f, 0.0f);
+	//Fifth Light: Blue point light
+	lightNames.push_back("Blue");
+	lights[4].position = XMFLOAT3(0.0f, -8.0f, 0.0f);
+	lights[4].color = XMFLOAT3(0.0f, 0.0f, 1.0f);
 }
 
 
@@ -258,10 +270,7 @@ void Game::ConstructShaderData(Entity currentEntity, XMFLOAT3 ambientColor, floa
 	pixelShader->SetFloat3("ambient", ambientColor);
 	pixelShader->SetFloat("totalTime", totalTime);
 	pixelShader->SetFloat("roughness", currentEntity.GetMaterial()->GetRoughness());
-	pixelShader->SetData("yellowLightD", &yellowLightD, sizeof(Light));
-	pixelShader->SetData("cyanLightD", &cyanLightD, sizeof(Light));
-	pixelShader->SetData("magentaLightD", &magentaLightD, sizeof(Light));
-	pixelShader->SetData("redLightP", &redLightP, sizeof(Light));
+	pixelShader->SetData("lights", &lights[0], sizeof(Light) * (int)lights.size());
 
 	//Copy the data to the buffer at the start of the frame
 	vertexShader->CopyAllBufferData();
@@ -320,6 +329,24 @@ void Game::BuildUI() {
 		ImGui::PopID();
 	}
 
+	ImGui::End();
+
+	ImGui::Begin("Directional Light Control");
+	for (int i = 0; i < 3; i++) {
+		ImGui::PushID(i);
+		ImGui::Text(lightNames[i]);
+		ImGui::SliderFloat3("Direction", &lights[i].direction.x, -10.0f, 10.0f);
+		ImGui::PopID();
+	}
+	ImGui::End();
+
+	ImGui::Begin("Point Light Control");
+	for (int i = 3; i < 5; i++) {
+		ImGui::PushID(i);
+		ImGui::Text(lightNames[i]);
+		ImGui::SliderFloat3("Position", &lights[i].position.x, -10.0f, 10.0f);
+		ImGui::PopID();
+	}
 	ImGui::End();
 
 	ImGui::Begin("Camera Control");

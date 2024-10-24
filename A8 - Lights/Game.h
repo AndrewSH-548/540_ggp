@@ -34,6 +34,8 @@ private:
 	float colorTint[4] = { 1.0f, 1.0f, 0.5f, 1.0f };
 	bool isDemoVisible = true;
 	vector<Entity> entities;
+	vector<Light> lights;
+	vector<const char*> lightNames;
 	float movementSpeed = 0.1f;
 
 	// Initialization helper methods - feel free to customize, combine, remove, etc.
