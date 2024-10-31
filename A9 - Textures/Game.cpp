@@ -57,9 +57,11 @@ void Game::Initialize()
 	
 	CreateWICTextureFromFile(Graphics::Device.Get(), Graphics::Context.Get(), FixPath(L"../../Assets/Textures/ironblock.png").c_str(), 0, &ironBlockTexture);
 	CreateWICTextureFromFile(Graphics::Device.Get(), Graphics::Context.Get(), FixPath(L"../../Assets/Textures/cobblestone.png").c_str(), 0, &cobblestoneTexture);
+	HRESULT result = CreateWICTextureFromFile(Graphics::Device.Get(), Graphics::Context.Get(), FixPath(L"../../Assets/Textures/glasspane.png").c_str(), 0, &glassTexture);
 
 	textures.insert({ "IronBlock", ironBlockTexture });
 	textures.insert({ "Cobblestone", cobblestoneTexture });
+	textures.insert({ "GlassPanel", glassTexture });
 
 	D3D11_SAMPLER_DESC samplerDesc = {};
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;

@@ -4,12 +4,14 @@ cbuffer ExternalData : register(b0) {
 	float4 colorTint;
     float3 cameraPos;
 	float3 ambient;
+    float totalTime;
     float roughness;
     Light lights[5];
 }
 
 Texture2D IronBlock : register(t0);
 Texture2D Cobblestone : register(t1);
+Texture2D GlassPanel : register(t2);
 SamplerState PointSampler : register(s0);
 
 // Calculates the diffuse term.
@@ -63,6 +65,7 @@ float4 main(VertexToPixel input) : SV_TARGET
     
     float3 surfaceColor = IronBlock.Sample(PointSampler, input.uv).rgb;
     float3 overlayColor = Cobblestone.Sample(PointSampler, input.uv).rgb / 4;
+    float3 subtractColor = GlassPanel.Sample(PointSampler, float2(input.uv.x + totalTime, input.uv.y)).rgb * 4;
     
     for (int i = 0; i < 5; i++)
     {
@@ -83,5 +86,5 @@ float4 main(VertexToPixel input) : SV_TARGET
 	//   interpolated for each pixel between the corresponding vertices 
 	//   of the triangle we're rendering
 	//return colorTint * float4(ambient, 1);
-    return float4(surfaceColor * finalLight - overlayColor, 1);
+    return float4(surfaceColor * finalLight + overlayColor - (subtractColor), 1);
 }

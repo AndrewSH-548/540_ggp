@@ -58,6 +58,7 @@ private:
 	// Textures
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ironBlockTexture;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> cobblestoneTexture;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> glassTexture;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState;
 
 	std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> textures;
