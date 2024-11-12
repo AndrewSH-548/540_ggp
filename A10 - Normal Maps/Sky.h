@@ -10,15 +10,7 @@
 class Sky
 {
 public:
-	Sky(Mesh mesh, Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState, 
-		const wchar_t* vertexShaderPath,
-		const wchar_t* pixelShaderPath,
-		const wchar_t* right,
-		const wchar_t* left,
-		const wchar_t* up,
-		const wchar_t* down,
-		const wchar_t* front,
-		const wchar_t* back);
+	Sky(Mesh mesh, Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState, const wchar_t* vertexShaderPath, const wchar_t* pixelShaderPath, std::wstring skyTexturePath);
 	void Draw(Camera camera);
 	~Sky();
 private:

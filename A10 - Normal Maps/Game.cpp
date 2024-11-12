@@ -90,12 +90,7 @@ void Game::Initialize()
 	skyBox = make_shared<Sky>(Mesh(FixPath(L"../../Assets/Models/cube.obj").c_str()), samplerState, 
 		FixPath(L"VertexShaderSky.cso").c_str(),
 		FixPath(L"PixelShaderSky.cso").c_str(),
-		FixPath(L"../../Assets/Textures/Clouds Pink/right.png").c_str(),
-		FixPath(L"../../Assets/Textures/Clouds Pink/left.png").c_str(),
-		FixPath(L"../../Assets/Textures/Clouds Pink/up.png").c_str(),
-		FixPath(L"../../Assets/Textures/Clouds Pink/down.png").c_str(),
-		FixPath(L"../../Assets/Textures/Clouds Pink/front.png").c_str(),
-		FixPath(L"../../Assets/Textures/Clouds Pink/back.png").c_str());
+		FixPath(L"../../Assets/Textures/Clouds Pink/"));
 };
 
 
@@ -161,7 +156,7 @@ void Game::CreateGeometry()
 	for (int i = 0; i < 3; i++) {
 		Light light = {};
 		light.type = LIGHT_TYPE_DIRECTIONAL;
-		light.intensity = 1.3f;
+		light.intensity = 3.3f;
 		lights.push_back(light);
 	}
 	//First Light: Yellow, lower left source
@@ -258,7 +253,7 @@ void Game::Draw(float deltaTime, float totalTime)
 		for (int i = 0; i < entities.size(); i++) {
 			entities[i].GetMaterial()->GetVertexShader()->SetShader();
 			entities[i].GetMaterial()->GetPixelShader()->SetShader();
-			ConstructShaderData(entities[i], XMFLOAT3(1, 1, 1), totalTime);
+			ConstructShaderData(entities[i], XMFLOAT3(1, 0.8f, 0.8f), totalTime);
 			entities[i].Draw();
 		}
 
@@ -338,13 +333,6 @@ void Game::BuildUI() {
 
 	//Window Resolution: Display as 2 decimal integers.
 	ImGui::Text("Window Resolution: %dx%d", Window::Width(), Window::Height());
-
-	//Separate Window for the color editor
-	ImGui::Begin("Background Color Editor");
-
-	ImGui::ColorPicker4("Background", &displayColor[0]);
-
-	ImGui::End();
 
 	//Window for Mesh Data
 	ImGui::Begin("Mesh Data");
