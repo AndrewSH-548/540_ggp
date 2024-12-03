@@ -88,5 +88,5 @@ float4 main(VertexToPixel input) : SV_TARGET
 	//   interpolated for each pixel between the corresponding vertices 
 	//   of the triangle we're rendering
 	//return colorTint * float4(input.tangent, 1);
-    return float4(pow(surfaceColor * finalLight, 1.0f/2.2f), 1);
+    return float4(pow(finalLight, 1.0f/2.2f), 1);
 }
