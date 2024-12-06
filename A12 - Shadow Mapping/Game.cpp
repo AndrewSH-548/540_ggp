@@ -147,7 +147,7 @@ void Game::CreateGeometry()
 
 	//Position all the objects.
 	for (int i = 0; i < entities.size() - 1; i++) {
-		entities[i].GetTransform()->MoveAbsolute(3.0f * i, -8.0f, 0.0f);
+		entities[i].GetTransform()->MoveAbsolute(3.0f * i - 3, -8.0f, 0.0f);
 	}
 
 	entities[4].GetTransform()->MoveAbsolute(0.0f, -12.0f, 0.0f);
@@ -159,8 +159,8 @@ void Game::CreateGeometry()
 	//First Light: Yellow direction light
 	Light dirLight = {};
 	dirLight.type = LIGHT_TYPE_DIRECTIONAL;
-	dirLight.direction = XMFLOAT3(0.0f, 1.0f, 3.0f);
-	dirLight.color = XMFLOAT3(1.0f, 1.0f, 0.3f);
+	dirLight.direction = XMFLOAT3(0.0f, -1.0f, 1.0f);
+	dirLight.color = XMFLOAT3(1.0f, 1.0f, 0.0f);
 	dirLight.intensity = 6.3f;
 	lights.push_back(dirLight);
 	lightNames.push_back("Yellow");
@@ -214,18 +214,38 @@ void Game::ConstructShadowMap() {
 		&srvDesc,
 		shadowSRV.GetAddressOf());
 
+	// Create the shadow rasterizer
+	D3D11_RASTERIZER_DESC shadowRastDesc = {};
+	shadowRastDesc.FillMode = D3D11_FILL_SOLID;
+	shadowRastDesc.CullMode = D3D11_CULL_BACK;
+	shadowRastDesc.DepthClipEnable = true;
+	shadowRastDesc.DepthBias = 1000; // Min. precision units, not world units!
+	shadowRastDesc.SlopeScaledDepthBias = 1.0f; // Bias more based on slope
+	Graphics::Device->CreateRasterizerState(&shadowRastDesc, &shadowRasterizer);
+
+	//Create the shadow sampler
+	D3D11_SAMPLER_DESC shadowSampDesc = {};
+	shadowSampDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+	shadowSampDesc.ComparisonFunc = D3D11_COMPARISON_LESS;
+	shadowSampDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+	shadowSampDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+	shadowSampDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+	shadowSampDesc.BorderColor[0] = 1.0f; // Only need the first component
+	Graphics::Device->CreateSamplerState(&shadowSampDesc, &shadowSampler);
+
 	XMMATRIX lightView = XMMatrixLookToLH(
 		XMLoadFloat3(&lights[0].direction) * -20,
 		XMLoadFloat3(&lights[0].direction),					//Shadows will be straight down
-		XMVECTOR{ 0, 1, 0 });
+		XMVectorSet( 0, 1, 0, 0));
+	XMStoreFloat4x4(&shadowViewMatrix, lightView);
 
 	float lightProjectionSize = 15.0f;
 	XMMATRIX lightProjection = XMMatrixOrthographicLH(
 		lightProjectionSize,
 		lightProjectionSize,
 		1.0f,
-		100.0f);
-
+		50.0f);
+	XMStoreFloat4x4(&shadowProjectionMatrix, lightProjection);
 }
 
 
@@ -288,6 +308,7 @@ void Game::Draw(float deltaTime, float totalTime)
 			ID3D11RenderTargetView* nullRTV{};
 			Graphics::Context->OMSetRenderTargets(1, &nullRTV, shadowDSV.Get());
 			Graphics::Context->PSSetShader(0, 0, 0);
+			Graphics::Context->RSSetState(shadowRasterizer.Get());
 			
 			//Change the viewport
 			D3D11_VIEWPORT viewport = {};
@@ -316,6 +337,7 @@ void Game::Draw(float deltaTime, float totalTime)
 				1,
 				Graphics::BackBufferRTV.GetAddressOf(),
 				Graphics::DepthBufferDSV.Get());
+			Graphics::Context->RSSetState(0);
 		}
 	}
 
@@ -350,6 +372,9 @@ void Game::Draw(float deltaTime, float totalTime)
 			1,
 			Graphics::BackBufferRTV.GetAddressOf(),
 			Graphics::DepthBufferDSV.Get());
+
+		ID3D11ShaderResourceView* nullSRVs[128] = {};
+		Graphics::Context->PSSetShaderResources(0, 128, nullSRVs);
 	}
 }
 
@@ -359,6 +384,8 @@ void Game::ConstructShaderData(Entity currentEntity, float totalTime) {
 	vertexShader->SetMatrix4x4("worldInverseTranspose", currentEntity.GetTransform()->GetWorldInverseTransposeMatrix());
 	vertexShader->SetMatrix4x4("view", cameras[activeCamera]->GetViewMatrix());
 	vertexShader->SetMatrix4x4("projection", cameras[activeCamera]->GetProjectionMatrix());
+	vertexShader->SetMatrix4x4("lightView", shadowViewMatrix);
+	vertexShader->SetMatrix4x4("lightProjection", shadowProjectionMatrix);
 
 	std::shared_ptr<SimplePixelShader> pixelShader = currentEntity.GetMaterial()->GetPixelShader();
 	pixelShader->SetFloat4("colorTint", currentEntity.GetMaterial()->GetColorTint());
@@ -369,9 +396,11 @@ void Game::ConstructShaderData(Entity currentEntity, float totalTime) {
 	for (auto& t : textures) {
 		pixelShader->SetShaderResourceView(t.first.c_str(), t.second);
 	}
+	pixelShader->SetShaderResourceView("ShadowMap", shadowSRV);
 	for (auto& s : samplers) {
 		pixelShader->SetSamplerState(s.first.c_str(), s.second);
 	}
+	pixelShader->SetSamplerState("ShadowSampler", shadowSampler);
 
 	//Copy the data to the buffer at the start of the frame
 	vertexShader->CopyAllBufferData();
@@ -444,7 +473,7 @@ void Game::BuildUI() {
 	}
 	ImGui::End();
 
-	ImGui::Image(shadowSRV.Get(), ImVec2(512, 512));
+	ImGui::Image(shadowSRV.Get(), ImVec2(256, 256));
 
 	ImGui::Begin("Camera Control");
 	ImGui::Text("Camera %d", activeCamera);
