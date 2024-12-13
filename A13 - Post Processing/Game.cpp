@@ -130,6 +130,7 @@ void Game::LoadShaders()
 	postProcessShader = make_shared<SimpleVertexShader>(Graphics::Device, Graphics::Context, FixPath(L"VertexShaderPostProcess.cso").c_str());
 	pixelShader = make_shared<SimplePixelShader>(Graphics::Device, Graphics::Context, FixPath(L"PixelShader.cso").c_str());
 	blurPixelShader = make_shared<SimplePixelShader>(Graphics::Device, Graphics::Context, FixPath(L"PixelShaderBlur.cso").c_str());
+	invertPixelShader = make_shared<SimplePixelShader>(Graphics::Device, Graphics::Context, FixPath(L"PixelShaderInvert.cso").c_str());
 
 	shadowVS = make_shared<SimpleVertexShader>(Graphics::Device, Graphics::Context, FixPath(L"VertexShaderShadow.cso").c_str());
 }
@@ -277,15 +278,32 @@ void Game::SetupPostProcesses() {
 	// Create the resource (no need to track it after the views are created below)
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> blurTexture;
 	Graphics::Device->CreateTexture2D(&blurTextureDesc, 0, blurTexture.GetAddressOf());
+	
+	// Describe the texture we're creating
+	D3D11_TEXTURE2D_DESC invertTextureDesc = {};
+	invertTextureDesc.Width = Window::Width();
+	invertTextureDesc.Height = Window::Height();
+	invertTextureDesc.ArraySize = 1;
+	invertTextureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	invertTextureDesc.CPUAccessFlags = 0;
+	invertTextureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	invertTextureDesc.MipLevels = 1;
+	invertTextureDesc.MiscFlags = 0;
+	invertTextureDesc.SampleDesc.Count = 1;
+	invertTextureDesc.SampleDesc.Quality = 0;
+	invertTextureDesc.Usage = D3D11_USAGE_DEFAULT;
+	// Create the resource (no need to track it after the views are created below)
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> invertTexture;
+	Graphics::Device->CreateTexture2D(&invertTextureDesc, 0, invertTexture.GetAddressOf());
 
 	// Create the Render Target View
-	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-	rtvDesc.Format = blurTextureDesc.Format;
-	rtvDesc.Texture2D.MipSlice = 0;
-	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	D3D11_RENDER_TARGET_VIEW_DESC blurRtvDesc = {};
+	blurRtvDesc.Format = blurTextureDesc.Format;
+	blurRtvDesc.Texture2D.MipSlice = 0;
+	blurRtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 	Graphics::Device ->CreateRenderTargetView(
 		blurTexture.Get(),
-		&rtvDesc,
+		&blurRtvDesc,
 		blurRenderTargetView.ReleaseAndGetAddressOf());
 	// Create the Shader Resource View
 	// By passing it a null description for the SRV, we
@@ -294,6 +312,20 @@ void Game::SetupPostProcesses() {
 		blurTexture.Get(),
 		0,
 		blurShaderResourceView.ReleaseAndGetAddressOf());
+
+	D3D11_RENDER_TARGET_VIEW_DESC invertRtvDesc = {};
+	invertRtvDesc.Format = invertTextureDesc.Format;
+	invertRtvDesc.Texture2D.MipSlice = 0;
+	invertRtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	Graphics::Device ->CreateRenderTargetView(
+		invertTexture.Get(),
+		&invertRtvDesc,
+		invertRenderTargetView.ReleaseAndGetAddressOf());
+	
+	Graphics::Device->CreateShaderResourceView(
+		invertTexture.Get(),
+		0,
+		invertShaderResourceView.ReleaseAndGetAddressOf());
 }
 
 
@@ -346,6 +378,7 @@ void Game::Draw(float deltaTime, float totalTime)
 		// Clear the back buffer (erase what's on screen) and depth buffer
 		Graphics::Context->ClearRenderTargetView(Graphics::BackBufferRTV.Get(), displayColor);
 		Graphics::Context->ClearRenderTargetView(blurRenderTargetView.Get(), displayColor);
+		Graphics::Context->ClearRenderTargetView(invertRenderTargetView.Get(), displayColor);
 		Graphics::Context->ClearDepthStencilView(Graphics::DepthBufferDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 		Graphics::Context->OMSetRenderTargets(1, blurRenderTargetView.GetAddressOf(), Graphics::DepthBufferDSV.Get());
 		
@@ -383,10 +416,8 @@ void Game::Draw(float deltaTime, float totalTime)
 			viewport.Width = (float)Window::Width();
 			viewport.Height = (float)Window::Height();
 			Graphics::Context->RSSetViewports(1, &viewport);
-			Graphics::Context->OMSetRenderTargets(
-				1,
-				Graphics::BackBufferRTV.GetAddressOf(),
-				Graphics::DepthBufferDSV.Get());
+			if (isBlurry) Graphics::Context->OMSetRenderTargets(1, blurRenderTargetView.GetAddressOf(), Graphics::DepthBufferDSV.Get());
+			else Graphics::Context->OMSetRenderTargets(1, Graphics::BackBufferRTV.GetAddressOf(), Graphics::DepthBufferDSV.Get());
 			Graphics::Context->RSSetState(0);
 		}
 	}
@@ -432,18 +463,31 @@ void Game::Draw(float deltaTime, float totalTime)
 }
 
 void Game::PostRender() {
-	Graphics::Context->OMSetRenderTargets(1, Graphics::BackBufferRTV.GetAddressOf(), 0);
-
+	Graphics::Context->OMSetRenderTargets(1, invertRenderTargetView.GetAddressOf(), 0);
 	postProcessShader->SetShader();
-
+	
 	blurPixelShader->SetShader();
 	blurPixelShader->SetShaderResourceView("Pixels", blurShaderResourceView.Get());
 	blurPixelShader->SetSamplerState("ClampSampler", postProcessSampler.Get());
-	blurPixelShader->SetInt("blurRadius", 0);
+	blurPixelShader->SetInt("blurRadius", blurRadius);
 	blurPixelShader->SetFloat("pixelWidth", 1.0f / Window::Width());
 	blurPixelShader->SetFloat("pixelHeight", 1.0f / Window::Height());
+
+	postProcessShader->CopyAllBufferData();
+	blurPixelShader->CopyAllBufferData();
+
 	Graphics::Context->Draw(3, 0);
 
+	Graphics::Context->OMSetRenderTargets(1, Graphics::BackBufferRTV.GetAddressOf(), 0);
+
+	invertPixelShader->SetShader();
+	invertPixelShader->SetShaderResourceView("Pixels", invertShaderResourceView.Get());
+	invertPixelShader->SetSamplerState("ClampSampler", postProcessSampler.Get());
+
+	postProcessShader->CopyAllBufferData();
+	invertPixelShader->CopyAllBufferData();
+
+	Graphics::Context->Draw(3, 0);
 }
 
 void Game::ConstructShaderData(Entity currentEntity, float totalTime) {
@@ -572,5 +616,7 @@ void Game::BuildUI() {
 	if (ImGui::Button("Toggle Blur Filter")) {
 		isBlurry = !isBlurry;
 	}
+
+	ImGui::SliderFloat("Blur Radius", &blurRadius, 1.0f, 10.0f);
 }
 #pragma endregion

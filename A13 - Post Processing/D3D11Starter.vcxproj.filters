@@ -181,6 +181,9 @@
     <FxCompile Include="PixelShaderBlur.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="PixelShaderInvert.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="ShaderIncludes.hlsli">

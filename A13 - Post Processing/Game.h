@@ -41,6 +41,7 @@ private:
 	vector<Light> lights;
 	vector<const char*> lightNames;
 	float movementSpeed = 0.1f;
+	float blurRadius = 1.0f;
 	std::shared_ptr<Sky> skyBox;
 
 	// Initialization helper methods - feel free to customize, combine, remove, etc.
@@ -95,5 +96,9 @@ private:
 	std::shared_ptr<SimplePixelShader> blurPixelShader;
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> blurRenderTargetView;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> blurShaderResourceView;
+	
+	std::shared_ptr<SimplePixelShader> invertPixelShader;
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> invertRenderTargetView;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> invertShaderResourceView;
 };
 
